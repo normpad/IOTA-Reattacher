@@ -64,6 +64,7 @@ window.iotaTransactionSpammer = (function(){
     var transactionCount = 0
     var confirmationCount = 0
     var averageConfirmationDuration = 0 // milliseconds
+    var confirmationTimes = []
 
     function getCurrentProvider() {
         if (customProvider) { return customProvider }
@@ -136,8 +137,6 @@ window.iotaTransactionSpammer = (function(){
             var transactionHash = transaction.hash
             setTimeout(checkTransaction(transactionHash,transactionStartDate),30000)
             
-            const transactionEndDate = Date.now()
-            const transactionDuration = transactionEndDate - transactionStartDate // milliseconds
             transactionCount += transferCount
             
             eventEmitter.emitEvent('state', [`Completed PoW (Proof of Work) on ${localConfirmationCount} transactions`])
@@ -163,8 +162,14 @@ window.iotaTransactionSpammer = (function(){
                 if (states[0]){
                     confirmationCount += 1
                     var confirmationTime = Date.now()
-                    transactionDuration = confirmationTime - transactionStartDate
-                    averageConfirmationDuration = ((averageConfirmationDuration + transactionDuration) / confirmationCount)/60
+                    transactionDuration = (confirmationTime - transactionStartDate)/60
+                    confirmationTimes.push(transactionDuration)
+                    var sum = 0
+                    for (var i=0; i<confirmationTimes.length; i++){
+                        sum += confirmationTimes[i]
+                    }
+                    averageConfirmationDuration = sum/confirmationTimes.length
+                    
                     eventEmitter.emitEvent('confirmationCountChanged', [confirmationCount])
                     eventEmitter.emitEvent('averageConfirmationDurationChanged', [averageConfirmationDuration])
                     eventEmitter.emitEvent('state', [`Transaction confirmed ${transactionHash}`])
