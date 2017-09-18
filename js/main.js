@@ -86,8 +86,8 @@ $(function(){
         $('#transactionsPerMinuteCount')[0].innerText = (iotaTransactionSpammer.getTransactionCount() / durationInMinutes()).toFixed(significantFigures)
     }
     function updateConfirmationsPerMinute() {
-        const durationInMilliseconds = Date.now() - startMilliseconds
-        $('#confirmationsPerMinuteCount')[0].innerText = (iotaTransactionSpammer.getConfirmationCount() / durationInMinutes()).toFixed(significantFigures)
+        //const durationInMilliseconds = Date.now() - startMilliseconds
+        $('#confirmationsPerMinuteCount')[0].innerText = (((iotaTransactionSpammer.getConfirmationCount() / iotaTransactionSpammer.getTransactionCount()) * 100).toFixed(significantFigures)) + '%'
     }
     function updateTimer() {
         $('#timeSpentSpamming')[0].innerText = millisecondsToHHMMSSms(durationInMilliseconds())
