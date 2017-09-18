@@ -87,7 +87,15 @@ $(function(){
     }
     function updateConfirmationsPerMinute() {
         //const durationInMilliseconds = Date.now() - startMilliseconds
-        $('#confirmationsPerMinuteCount')[0].innerText = (((iotaTransactionSpammer.getConfirmationCount() / iotaTransactionSpammer.getTransactionCount()) * 100).toFixed(significantFigures)) + '%'
+        var confirmedTransactions = iotaTransactionSpammer.getConfirmationCount()
+        var totalTransactions = iotaTransactionSpammer.getTransactionCount()
+        if (totalTransactions == 0){
+            $('#confirmationsPerMinuteCount')[0].innerText = '0%'
+        }
+        else{
+            $('#confirmationsPerMinuteCount')[0].innerText = ((( confirmedTransactions/totalTransactions ) * 100).toFixed(significantFigures)) + '%'
+        }
+        
     }
     function updateTimer() {
         $('#timeSpentSpamming')[0].innerText = millisecondsToHHMMSSms(durationInMilliseconds())
