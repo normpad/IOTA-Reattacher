@@ -56,7 +56,7 @@ window.iotaTransactionSpammer = (function(){
     const hostingSite = 'https://github.com/pRizz/iota.transactionSpammer.js'
     const hostingSiteTritified = tritifyURL(hostingSite)
     var message = hostingSiteTritified
-    var tag = "SEESITEINMESSAGE"
+    var tag = "ITHA"
     var numberOfTransfersInBundle = 1
 
     const eventEmitter = new EventEmitter()
@@ -134,27 +134,7 @@ window.iotaTransactionSpammer = (function(){
             }
             var transaction = bundle[0]
             var transactionHash = transaction.hash
-            var checkConfirmation = setInterval(function(){
-                iota.api.getLatestInclusion([transactionHash],
-                    function(error,states){
-                    //eventEmitter.emitEvent('state', [`Checking if transaction is confirmed: ${transactionHash}: ${states[0]}`])
-                        if (error){    
-                            eventEmitter.emitEvent('state', ['Error occurred while checking transactions'])                        
-                            return
-                        }
-                        if (states[0]){
-                            confirmationCount += 1
-                            const oldTotalConfirmationDuration = averageConfirmationDuration * confirmationCount
-                            averageConfirmationDuration = (oldTotalConfirmationDuration + transactionDuration) / confirmationCount
-                            eventEmitter.emitEvent('confirmationCountChanged', [confirmationCount])
-                            eventEmitter.emitEvent('averageConfirmationDurationChanged', [averageConfirmationDuration])
-                            eventEmitter.emitEvent('state', [`Transaction confirmed`])
-                            clearInterval(checkConfirmation)
-                        }
-                    }
-                )},
-                10000, checkConfirmation
-            )
+            setTimeout(checkTransaction(transactionHash,transactionStartDate),30000)
             
             const transactionEndDate = Date.now()
             const transactionDuration = transactionEndDate - transactionStartDate // milliseconds
@@ -171,6 +151,28 @@ window.iotaTransactionSpammer = (function(){
 
             checkIfNodeIsSynced()
         })
+    }
+    
+    function checkTransaction(transactionHash,transactionStartDate){
+        iota.api.getLatestInclusion([transactionHash],
+            function(error,states){
+            //eventEmitter.emitEvent('state', [`Checking if transaction is confirmed: ${transactionHash}: ${states[0]}`])
+                if (error){    
+                    eventEmitter.emitEvent('state', ['Error occurred while checking transactions'])                        
+                }
+                if (states[0]){
+                    confirmationCount += 1
+                    var confirmationTime = Date.now()
+                    transactionDuration = confirmationTime - transactionStartDate
+                    averageConfirmationDuration = ((averageConfirmationDuration + transactionDuration) / confirmationCount)/60
+                    eventEmitter.emitEvent('confirmationCountChanged', [confirmationCount])
+                    eventEmitter.emitEvent('averageConfirmationDurationChanged', [averageConfirmationDuration])
+                    eventEmitter.emitEvent('state', [`Transaction confirmed ${transactionHash}`])
+                }
+                else{
+                    setTimeout(checkTransaction(transactionHash,transactionStartDate),10000)
+                }
+            })
     }
 
     function getRandomProvider() {
