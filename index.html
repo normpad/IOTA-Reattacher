@@ -10,7 +10,7 @@
     <meta name="author" content="Peter Ryszkiewicz">
     <link rel="icon" type="image/x-icon" href="https://assets-cdn.github.com/favicon.ico">
 
-    <title>IOTA Transaction Spammer</title>
+    <title>IOTA Tangle Health Analyzer</title>
 
     <script type="text/javascript" src="deps/jquery.min.js"></script>
     <script type="text/javascript" src="deps/bootstrap.min.js"></script>
@@ -44,14 +44,14 @@
                     <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Projects <span class="caret"></span></a>
                     <ul class="dropdown-menu">
                         <li><a href="https://prizz.github.io/My-IOTA-Balance/">My IOTA Balance</a></li>
-                        <li><a href="https://prizz.github.io/iota-transaction-spammer-webapp/">IOTA Transaction Spammer</a></li>
+                        <li><a href="https://prizz.github.io/iota-transaction-spammer-webapp/">IOTA Tangle Health Analyzer</a></li>
                         <li><a href="https://prizz.github.io/iota-seed-encryptor-decryptor/">IOTA Seed Encryptor/Decryptor</a></li>
                         <li><a href="https://prizz.github.io/iota-buy-strategy/">IOTA Buy Strategy</a></li>
                     </ul>
                 </li>
             </ul>
         </nav>
-        <h3 class="text-muted">IOTA Transaction Spammer <img class="spinning-logo" src="iotaLogo.png"></h3>
+        <h3 class="text-muted">IOTA Tangle Health Analyzer <img class="spinning-logo" src="iotaLogo.png"></h3>
     </div>
 
     <div class="progress">
@@ -102,25 +102,20 @@
 
     <div class="row marketing text-center">
         <div class="col-md-8 col-md-offset-2">
-            <h1>Why spam the network with transactions?</h1>
-            <h2>
-                It speeds up confirmations!
-            </h2>
-            <h2>
-                IOTA is a cryptocurrency whose transaction confirmations are based on subsequent transactions that get added to the tangle. So the more transactions that get added to the tangle, the faster previous transactions get confirmed.
-            </h2>
-            <h2>
-                There are other bottlenecks in play that may limit confirmation time, like network quality, bandwidth, and node reliability.
-            </h2>
-        </div>
-    </div>
-
-    <div class="row marketing text-center">
-        <div class="col-md-8 col-md-offset-2">
             <h1>How does this work?</h1>
+            <h2>
+                The webapp will attach 100 transactions to the tangle. It will then monitor the transactions until they are confirmed.
+            </h2>
+            <h2>
+                We are mainly looking for the ratio of confirmed transactions to transactions sent. We also will gather the average confirmation time for a transaction. 
+            </h2>
+            <h2>
+                Note: These values are only relevant to the state of the tangle at the time the app was run.
+            </h2>
             <h2>
                 This webapp combines two libraries from the IOTA foundation to work: <a href="https://github.com/iotaledger/iota.lib.js">iota.lib.js</a> for interacting with IOTA nodes and <a href="https://github.com/iotaledger/curl.lib.js">curl.lib.js</a> for doing the PoW (Proof of Work) in your web browser.
             </h2>
+            
         </div>
     </div>
 
@@ -150,7 +145,7 @@
         <div class="col-md-8 col-md-offset-2">
             <h1>About the Project</h1>
             <h2>
-                This project is hosted on GitHub at <a href="https://github.com/pRizz/iota-transaction-spammer-webapp">https://github.com/pRizz/iota-transaction-spammer-webapp</a> under the MIT license.
+                This project is hosted on GitHub at <a href="https://github.com/normpad/iota-tangle-health-analyzer">https://github.com/normpad/iota-tangle-health-analyzer</a> under the MIT license.
             </h2>
         </div>
     </div>
