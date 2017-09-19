@@ -22,7 +22,6 @@ window.iotaTransactionSpammer = (function(){
 
     // from 'https://iotasupport.com/providers.json' + requested additions - unreliable nodes
     const httpProviders = [
-        "http://iota.bitfinex.com:80",
         "http://service.iotasupport.com:14265",
         "http://node01.iotatoken.nl:14265",
         "http://node02.iotatoken.nl:14265",
@@ -52,6 +51,7 @@ window.iotaTransactionSpammer = (function(){
     var depth = 10
     var weight = 15
     var spamSeed = generateSeed()
+    var spamAddress
 
     const hostingSite = 'https://github.com/pRizz/iota.transactionSpammer.js'
     const hostingSiteTritified = tritifyURL(hostingSite)
@@ -106,7 +106,7 @@ window.iotaTransactionSpammer = (function(){
 
     function generateTransfer() {
         return {
-            address: spamSeed,
+            address: spamAddress,
             value: 0,
             message: message,
             tag: tag
@@ -119,36 +119,41 @@ window.iotaTransactionSpammer = (function(){
         curl.overrideAttachToTangle(iota.api)
     }
 
-    function sendMessages() {
-        const transfers = generateTransfers()
-        const transferCount = transfers.length
-        const localConfirmationCount = transferCount * 2
-        const transactionStartDate = Date.now()
-        eventEmitter.emitEvent('state', [`Performing PoW (Proof of Work) on ${localConfirmationCount} transactions`])
-        iota.api.sendTransfer(spamSeed, generateDepth(), weight, transfers, function(error, bundle){
-            if (error) {
-                eventEmitter.emitEvent('state', ['Error occurred while sending transactions'])
-                setTimeout(function(){
-                    changeProviderAndSync()
-                }, 1000)
-                return
-            }
-            var transaction = bundle[0]
-            var transactionHash = transaction.hash
-            setTimeout(checkTransaction(transactionHash,transactionStartDate),30000)
-            
-            transactionCount += transferCount
-            
-            eventEmitter.emitEvent('state', [`Completed PoW (Proof of Work) on ${localConfirmationCount} transactions`])
-            eventEmitter.emitEvent('transactionCountChanged', [transactionCount])
-            eventEmitter.emitEvent('transactionCompleted', [bundle])
+    function sendMessages() {      
+        spamSeed = generateSeed()
+        spamSeed2 = generateSeed()
+        iota.api.getNewAddress(spamSeed2,function(error,address){
+            spamAddress = iota.utils.addChecksum(address)
+            const transfers = generateTransfers()
+            const transferCount = transfers.length
+            const localConfirmationCount = transferCount * 2
+            const transactionStartDate = Date.now()
+            eventEmitter.emitEvent('state', [`Performing PoW (Proof of Work) on ${localConfirmationCount} transactions`])
+            iota.api.sendTransfer(spamSeed, generateDepth(), weight, transfers, function(error, bundle){
+                if (error) {
+                    eventEmitter.emitEvent('state', ['Error occurred while sending transactions'])
+                    setTimeout(function(){
+                        changeProviderAndSync()
+                    }, 1000)
+                    return
+                }
+                var transaction = bundle[0]
+                var transactionHash = transaction.hash
+                setTimeout(checkTransaction(transactionHash,transactionStartDate),30000)
+                
+                transactionCount += transferCount
+                
+                eventEmitter.emitEvent('state', [`Completed PoW (Proof of Work) on ${localConfirmationCount} transactions`])
+                eventEmitter.emitEvent('transactionCountChanged', [transactionCount])
+                eventEmitter.emitEvent('transactionCompleted', [bundle])
 
-            if(optionsProxy.isLoadBalancing) {
-                eventEmitter.emitEvent('state', ['Changing nodes to balance the load'])
-                return changeProviderAndSync()
-            }
+                if(optionsProxy.isLoadBalancing) {
+                    eventEmitter.emitEvent('state', ['Changing nodes to balance the load'])
+                    return changeProviderAndSync()
+                }
 
-            checkIfNodeIsSynced()
+                checkIfNodeIsSynced()
+            })
         })
     }
     
@@ -157,7 +162,9 @@ window.iotaTransactionSpammer = (function(){
             function(error,states){
             //eventEmitter.emitEvent('state', [`Checking if transaction is confirmed: ${transactionHash}: ${states[0]}`])
                 if (error){    
-                    eventEmitter.emitEvent('state', ['Error occurred while checking transactions'])                        
+                    eventEmitter.emitEvent('state', ['Error occurred while checking transactions'])      
+                    setTimeout(checkTransaction(transactionHash,transactionStartDate),10000)   
+                    return
                 }
                 if (states[0]){
                     confirmationCount += 1
