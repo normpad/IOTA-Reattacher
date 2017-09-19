@@ -57,7 +57,7 @@ window.iotaTransactionSpammer = (function(){
     const hostingSite = 'https://github.com/pRizz/iota.transactionSpammer.js'
     const hostingSiteTritified = tritifyURL(hostingSite)
     var message = hostingSiteTritified
-    var tag = "ITHA"
+    var tag = "REATTACHER"
     var numberOfTransfersInBundle = 1
 
     const eventEmitter = new EventEmitter()
@@ -129,14 +129,18 @@ window.iotaTransactionSpammer = (function(){
                 checkIfNodeIsSynced()
                 return
             }
-            eventEmitter.emitEvent('state', ['Got tip transactions... picking random transaction...'])      
+            eventEmitter.emitEvent('state', ['Searching for a non-zero value transaction...'])      
             tip = tips[Math.floor(Math.random() * tips.length)]
             iota.api.getBundle(tip,function(error,bundle){
                 if(error){
-                    eventEmitter.emitEvent('state', ['Error getting bundle.'])
-                    checkIfNodeIsSynced()
+                    sendMessages()
                     return
                 }
+                if (bundle[0].value == 0){
+                    sendMessages()
+                    return
+                }
+                eventEmitter.emitEvent('state', ['Non-zero value transaction found!'])   
                 inputs = []
                 for (var i=0; i < bundle.lenghth; i++){
                     if (bundle[i].value < 0) {
@@ -161,7 +165,7 @@ window.iotaTransactionSpammer = (function(){
                             transactionCount  += 1
                             eventEmitter.emitEvent('state', ['Transaction reattached successfully.'])
                             eventEmitter.emitEvent('transactionCountChanged', [transactionCount])
-                            eventEmitter.emitEvent('transactionCompleted', [bundle])
+                            eventEmitter.emitEvent('transactionCompleted', [bundle[0].bundle])
                             if(optionsProxy.isLoadBalancing) {
                                 eventEmitter.emitEvent('state', ['Changing nodes to balance the load'])
                                 return changeProviderAndSync()
