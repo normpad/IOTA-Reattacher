@@ -180,6 +180,7 @@ window.iotaTransactionSpammer = (function(){
                     eventEmitter.emitEvent('confirmationCountChanged', [confirmationCount])
                     eventEmitter.emitEvent('averageConfirmationDurationChanged', [averageConfirmationDuration])
                     eventEmitter.emitEvent('state', [`Transaction confirmed ${transactionHash}`])
+                    changeProviderAndSync()
                 }
                 else{
                     setTimeout(checkTransaction(transactionHash,transactionStartDate),10000)
