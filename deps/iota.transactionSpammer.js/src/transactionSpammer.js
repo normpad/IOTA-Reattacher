@@ -244,9 +244,7 @@ window.iotaTransactionSpammer = (function(){
         eventEmitter.emitEvent('state', ['Randomly changing IOTA nodes'])
         _currentProvider = getRandomProvider()
         eventEmitter.emitEvent('state', [`New IOTA node: ${getCurrentProvider()}`])
-        if (transactionCount < 100){
-            restartSpamming()  
-        }
+        restartSpamming()  
     }
 
     function checkIfNodeIsSynced() {
