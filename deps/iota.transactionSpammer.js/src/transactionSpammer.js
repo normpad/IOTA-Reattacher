@@ -52,7 +52,9 @@ window.iotaTransactionSpammer = (function(){
     var weight = 15
     var spamSeed = generateSeed()
     var spamAddress
-    var tips
+    var tipsHashes
+    var tipTransactions
+    var tipIndex
 
     const hostingSite = 'https://github.com/pRizz/iota.transactionSpammer.js'
     const hostingSiteTritified = tritifyURL(hostingSite)
@@ -120,37 +122,35 @@ window.iotaTransactionSpammer = (function(){
         curl.overrideAttachToTangle(iota.api)
     }
 
-    function sendMessages() {      
-        iota.api.getTips(function(error,tips){
-            if(error){
-                eventEmitter.emitEvent('state', ['Error getting tips.'])
-                checkIfNodeIsSynced()
-                return
-            }
-            eventEmitter.emitEvent('state', [`Got ${tips.length} tips...`])   
-            eventEmitter.emitEvent('state', ['Searching for a non-zero value transaction...'])      
-            findReattachableTransaction(tips)
-        })   
+    function sendMessages() {        
+        eventEmitter.emitEvent('state', [`Got ${tipTransactions.length} tips...`])
+        eventEmitter.emitEvent('state', ['Searching for a non-zero value transaction...'])    
+        findReattachableTransaction() 
     }
     
-    function findReattachableTransaction(tips){
-        tip = tips[Math.floor(Math.random() * tips.length)]
-        iota.api.getBundle(tip,function(error,bundle){
+    function findReattachableTransaction(){
+        var tip
+        var value = 0
+        while(value <= 1){
+            if(tipTransactions.length == 0){
+                populateTips()
+                return
+            }
+            tip = tipTransactions.pop()
+            value = tip.value
+        }     
+        iota.api.getBundle(tip.hash,function(error,bundle){
             if(error){
                 findReattachableTransaction(tips)
                 return
-            }
-            if (bundle[0].value <= 1){
-                findReattachableTransaction(tips)
-                return
-            }
-            eventEmitter.emitEvent('state', ['Non-zero value transaction found!'])   
+            }  
             var inputs = []
             for (var i=0; i < bundle.length; i++){
                 if (bundle[i].value < 0) {
                     inputs.push(bundle[i].address)
                 }
             }
+            eventEmitter.emitEvent('state', ['Non-zero value transaction found!']) 
             eventEmitter.emitEvent('state', ['Checking if transaction is reattachable...'])
             iota.api.isReattachable(inputs,function(error,reattachable){
                 if (error){
@@ -167,30 +167,35 @@ window.iotaTransactionSpammer = (function(){
                     reattachable = temp
                 }
                 if (reattachable){
-                    eventEmitter.emitEvent('state', ['Reattaching transaction...'])
-                    iota.api.replayBundle(bundle[0].hash,3,15,function(error){
-                        if(error){
-                            eventEmitter.emitEvent('state', ['Error replaying bundle'])
-                            checkIfNodeIsSynced()
-                            return
-                        }
-                        transactionCount  += 1
-                        eventEmitter.emitEvent('state', ['Transaction reattached successfully.'])
-                        eventEmitter.emitEvent('transactionCountChanged', [transactionCount])
-                        eventEmitter.emitEvent('transactionCompleted', [bundle[0].bundle])
-                        checkTransaction(bundle,Date.now())
-                        if(optionsProxy.isLoadBalancing) {
-                            eventEmitter.emitEvent('state', ['Changing nodes to balance the load'])
-                            return changeProviderAndSync()
-                        }       
-                        checkIfNodeIsSynced()
-                    })
+                    reattachTransaction(bundle)
                 }
                 else{
-                    checkIfNodeIsSynced()
+                    eventEmitter.emitEvent('state', ['Not reattachable.'])
+                    findReattachableTransaction()
                 }
             })  
         })        
+    }
+    
+    function reattachTransaction(bundle){
+        eventEmitter.emitEvent('state', ['Reattaching transaction...'])
+        iota.api.replayBundle(bundle[0].hash,3,15,function(error){
+            if(error){
+                eventEmitter.emitEvent('state', ['Error replaying bundle'])
+                checkIfNodeIsSynced()
+                return
+            }
+            transactionCount  += 1
+            eventEmitter.emitEvent('state', ['Transaction reattached successfully.'])
+            eventEmitter.emitEvent('transactionCountChanged', [transactionCount])
+            eventEmitter.emitEvent('transactionCompleted', [bundle[0].bundle])
+            checkTransaction(bundle,Date.now())
+            if(optionsProxy.isLoadBalancing) {
+                eventEmitter.emitEvent('state', ['Changing nodes to balance the load'])
+                return changeProviderAndSync()
+            }       
+            checkIfNodeIsSynced()
+        })
     }
     
     function checkTransaction(bundle,startTime){
@@ -234,6 +239,66 @@ window.iotaTransactionSpammer = (function(){
                 setTimeout(checkTransaction,60000,bundle,startTime)
             }
         })
+    }
+    
+    function populateTips(){
+        eventEmitter.emitEvent('state', ['Getting tip transactions... This may take a while...'])
+        iota.api.getTips(function(error,success){
+            if(error){
+                eventEmitter.emitEvent('state', ['Error getting tips.'])
+                return
+            }
+            tips = success
+            tipTransactions = []
+            tipIndex = 0 
+            getTipTransactionObjects()
+        })
+    }
+    
+    function getTipTransactionObjects(){
+        var tipSlice
+        var done = false
+        if((tipIndex + 100) > tips.length){
+            tipSlice = tips.slice(tipIndex,tips.length)
+            done = true
+        }
+        else{
+            tipSlice = tips.slice(tipIndex,tipIndex + 100)
+        }
+        iota.api.getTransactionsObjects(tipSlice,function(error,success){
+            if(error){
+                eventEmitter.emitEvent('state', ['Error getting tips.'])
+                return
+            }
+            for(var i=0; i<success.length; i++){
+                tipTransactions.push(success[i])
+            }
+            tipIndex += 100
+            if(!done){
+                setTimeout(getTipTransactionObjects,100)
+            }
+            else{
+                tipTransactions = shuffle(tipTransactions)
+                restartSpamming()
+            }
+        })
+    }
+    
+    function shuffle(array) {
+        var m = array.length, t, i;
+
+        // While there remain elements to shuffle…
+        while (m) {
+
+            // Pick a remaining element…
+            i = Math.floor(Math.random() * m--);
+
+            // And swap it with the current element.
+            t = array[m];
+            array[m] = array[i];
+            array[i] = t;
+        }
+        return array;
     }
 
     function getRandomProvider() {
@@ -327,8 +392,7 @@ window.iotaTransactionSpammer = (function(){
         startSpamming: function() {
             if(started) { return }
             started = true
-            eventEmitter.emitEvent('state', ['Start transaction spamming'])
-            restartSpamming()
+            populateTips()
         },
         stopSpamming: function() {
             // TODO
