@@ -139,7 +139,7 @@ window.iotaTransactionSpammer = (function(){
                 }
                 var transaction = bundle[0]
                 var transactionHash = transaction.hash
-                setTimeout(checkTransaction(transactionHash,transactionStartDate),30000)
+                setTimeout(checkTransaction,10000,transactionHash,transactionStartDate) 
                 
                 transactionCount += transferCount
                 
@@ -163,7 +163,7 @@ window.iotaTransactionSpammer = (function(){
             //eventEmitter.emitEvent('state', [`Checking if transaction is confirmed: ${transactionHash}: ${states[0]}`])
                 if (error){    
                     eventEmitter.emitEvent('state', ['Error occurred while checking transactions'])      
-                    setTimeout(checkTransaction(transactionHash,transactionStartDate),10000)   
+                    setTimeout(checkTransaction,10000,transactionHash,transactionStartDate)   
                     return
                 }
                 if (states[0]){
@@ -183,7 +183,7 @@ window.iotaTransactionSpammer = (function(){
                     changeProviderAndSync()
                 }
                 else{
-                    setTimeout(checkTransaction(transactionHash,transactionStartDate),10000)
+                    setTimeout(checkTransaction,10000,transactionHash,transactionStartDate) 
                 }
             })
     }
