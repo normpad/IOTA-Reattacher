@@ -121,84 +121,104 @@ window.iotaTransactionSpammer = (function(){
     }
 
     function sendMessages() {      
-        spamSeed = generateSeed()
-        spamSeed2 = generateSeed()
         iota.api.getTips(function(error,tips){
             if(error){
                 eventEmitter.emitEvent('state', ['Error getting tips.'])
                 checkIfNodeIsSynced()
                 return
             }
+            eventEmitter.emitEvent('state', [`Got ${tips.length} tips...`])   
             eventEmitter.emitEvent('state', ['Searching for a non-zero value transaction...'])      
-            tip = tips[Math.floor(Math.random() * tips.length)]
-            iota.api.getBundle(tip,function(error,bundle){
-                if(error){
-                    sendMessages()
-                    return
-                }
-                if (bundle[0].value == 0){
-                    sendMessages()
-                    return
-                }
-                eventEmitter.emitEvent('state', ['Non-zero value transaction found!'])   
-                inputs = []
-                for (var i=0; i < bundle.lenghth; i++){
-                    if (bundle[i].value < 0) {
-                        inputs.push(bundle[i])
-                    }
-                }
-                eventEmitter.emitEvent('state', ['Checking if transaction is reattachable...'])
-                iota.api.isReattachable(inputs,function(error,reattachable){
-                    if (error){
-                        eventEmitter.emitEvent('state', ['Error checking if transaction is reattachable'])
-                        checkIfNodeIsSynced()
-                    }
-                    
-                    if (reattachable){
-                        eventEmitter.emitEvent('state', ['Reattaching transaction...'])
-                        iota.api.replayBundle(bundle[0].hash,3,15,function(error){
-                            if(error){
-                                eventEmitter.emitEvent('state', ['Error replaying bundle'])
-                                checkIfNodeIsSynced()
-                                return
-                            }
-                            transactionCount  += 1
-                            eventEmitter.emitEvent('state', ['Transaction reattached successfully.'])
-                            eventEmitter.emitEvent('transactionCountChanged', [transactionCount])
-                            eventEmitter.emitEvent('transactionCompleted', [bundle[0].bundle])
-                            if(optionsProxy.isLoadBalancing) {
-                                eventEmitter.emitEvent('state', ['Changing nodes to balance the load'])
-                                return changeProviderAndSync()
-                            }       
-                            checkIfNodeIsSynced()
-                        })
-                    }
-                    else{
-                        checkIfNodeIsSynced()
-                    }
-                })  
-            })        
+            findReattachableTransaction(tips)
         })   
     }
     
-    function checkTransaction(bundle){
-        inputs = []
-        for (var i=0; i < bundle.lenghth; i++){
+    function findReattachableTransaction(tips){
+        tip = tips[Math.floor(Math.random() * tips.length)]
+        iota.api.getBundle(tip,function(error,bundle){
+            if(error){
+                findReattachableTransaction(tips)
+                return
+            }
+            if (bundle[0].value <= 1){
+                findReattachableTransaction(tips)
+                return
+            }
+            eventEmitter.emitEvent('state', ['Non-zero value transaction found!'])   
+            var inputs = []
+            for (var i=0; i < bundle.length; i++){
+                if (bundle[i].value < 0) {
+                    inputs.push(bundle[i].address)
+                }
+            }
+            eventEmitter.emitEvent('state', ['Checking if transaction is reattachable...'])
+            iota.api.isReattachable(inputs,function(error,reattachable){
+                if (error){
+                    eventEmitter.emitEvent('state', ['Error checking if transaction is reattachable'])
+                    checkIfNodeIsSynced()
+                }
+                if (typeof(reattachable) == 'object'){
+                    var temp = true
+                    for(var i=0; i<reattachable.length; i++){
+                        if(!reattachable[i]) {
+                            temp = false
+                        }
+                    }
+                    reattachable = temp
+                }
+                if (reattachable){
+                    eventEmitter.emitEvent('state', ['Reattaching transaction...'])
+                    iota.api.replayBundle(bundle[0].hash,3,15,function(error){
+                        if(error){
+                            eventEmitter.emitEvent('state', ['Error replaying bundle'])
+                            checkIfNodeIsSynced()
+                            return
+                        }
+                        transactionCount  += 1
+                        eventEmitter.emitEvent('state', ['Transaction reattached successfully.'])
+                        eventEmitter.emitEvent('transactionCountChanged', [transactionCount])
+                        eventEmitter.emitEvent('transactionCompleted', [bundle[0].bundle])
+                        checkTransaction(bundle,Date.now())
+                        if(optionsProxy.isLoadBalancing) {
+                            eventEmitter.emitEvent('state', ['Changing nodes to balance the load'])
+                            return changeProviderAndSync()
+                        }       
+                        checkIfNodeIsSynced()
+                    })
+                }
+                else{
+                    checkIfNodeIsSynced()
+                }
+            })  
+        })        
+    }
+    
+    function checkTransaction(bundle,startTime){
+        var inputs = []
+        for (var i=0; i < bundle.length; i++){
             if (bundle[i].value < 0) {
-                inputs.push(bundle[i])
+                inputs.push(bundle[i].address)
             }
         }
         iota.api.isReattachable(inputs,function(error,reattachable){
-            //eventEmitter.emitEvent('state', [`Checking if transaction is confirmed: ${transactionHash}: ${states[0]}`])
             if (error){    
                 eventEmitter.emitEvent('state', ['Error occurred while checking transactions'])      
-                setTimeout(checkTransaction(bundle),10000)   
+                setTimeout(checkTransaction,60000,bundle,startTime)   
                 return
             }
-            if (!reattachable){
+            if (typeof(reattachable) == 'object'){
+                var temp = true
+                for(var i=0; i<reattachable.length; i++){
+                    if(!reattachable[i]) {
+                        temp = false
+                    }
+                }
+                reattachable = temp
+            }   
+            if (!reattachable){ 
                 confirmationCount += 1
                 var confirmationTime = Date.now()
-                transactionDuration = (confirmationTime - transactionStartDate)/60
+                transactionDuration = (confirmationTime - startTime)/60
                 confirmationTimes.push(transactionDuration)
                 var sum = 0
                 for (var i=0; i<confirmationTimes.length; i++){
@@ -208,10 +228,10 @@ window.iotaTransactionSpammer = (function(){
                 
                 eventEmitter.emitEvent('confirmationCountChanged', [confirmationCount])
                 eventEmitter.emitEvent('averageConfirmationDurationChanged', [averageConfirmationDuration])
-                eventEmitter.emitEvent('state', [`Transaction confirmed ${transactionHash}`])
+                eventEmitter.emitEvent('state', [`Transaction confirmed`])
             }
             else{
-                setTimeout(checkTransaction(bundle),10000)
+                setTimeout(checkTransaction,60000,bundle,startTime)
             }
         })
     }
