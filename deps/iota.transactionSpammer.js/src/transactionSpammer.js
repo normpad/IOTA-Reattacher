@@ -156,6 +156,7 @@ window.iotaTransactionSpammer = (function(){
                 if (error){
                     eventEmitter.emitEvent('state', ['Error checking if transaction is reattachable'])
                     checkIfNodeIsSynced()
+                    return
                 }
                 if (typeof(reattachable) == 'object'){
                     var temp = true
