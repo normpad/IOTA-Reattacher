@@ -52,6 +52,7 @@ window.iotaTransactionSpammer = (function(){
     var depth = 10
     var weight = 15
     var tipBatchSize = 500
+    reattachTimeThreshold = 30 //minutes
     var spamSeed = generateSeed()
     var spamAddress
     var tipsHashes
@@ -126,33 +127,40 @@ window.iotaTransactionSpammer = (function(){
 
     function sendMessages() {        
         eventEmitter.emitEvent('state', [`Got ${tipTransactions.length} tips...`])
-        eventEmitter.emitEvent('state', ['Searching for a non-zero value transaction...'])    
+        eventEmitter.emitEvent('state', [`Searching for a non-zero value transaction older than ${reattachTimeThreshold} min...`])    
         findReattachableTransaction() 
     }
     
     function findReattachableTransaction(){
         var tip
         var value = 0
-        while(value <= 1){
+        var transactionAge = 0
+        while(value < 1 || transactionAge < reattachTimeThreshold){
             if(tipTransactions.length == 0){
                 populateTips()
                 return
             }
             tip = tipTransactions.pop()
             value = tip.value
+            timestamp = tip.timestamp
+            if (timestamp<1262304000000) {
+                timestamp = timestamp * 1000
+            }
+            
+            transactionAge = (Date.now() - timestamp)/(60*1000) 
         }     
         iota.api.getBundle(tip.hash,function(error,bundle){
             if(error){
                 findReattachableTransaction(tips)
                 return
-            }  
+            }             
             var inputs = []
             for (var i=0; i < bundle.length; i++){
                 if (bundle[i].value < 0) {
                     inputs.push(bundle[i].address)
                 }
             }
-            eventEmitter.emitEvent('state', ['Non-zero value transaction found!']) 
+            eventEmitter.emitEvent('state', [`Non-zero value transaction found! Transaction has been pending for ${transactionAge} minutes!`]) 
             eventEmitter.emitEvent('state', ['Checking if transaction is reattachable...'])
             iota.api.isReattachable(inputs,function(error,reattachable){
                 if (error){
