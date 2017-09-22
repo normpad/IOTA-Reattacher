@@ -51,7 +51,7 @@ window.iotaTransactionSpammer = (function(){
 
     var depth = 10
     var weight = 15
-    var tipBatchSize = 100
+    var tipBatchSize = 500
     var spamSeed = generateSeed()
     var spamAddress
     var tipsHashes
