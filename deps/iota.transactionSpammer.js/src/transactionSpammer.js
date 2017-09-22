@@ -51,6 +51,7 @@ window.iotaTransactionSpammer = (function(){
 
     var depth = 10
     var weight = 15
+    var tipBatchSize = 500
     var spamSeed = generateSeed()
     var spamAddress
     var tipsHashes
@@ -260,12 +261,12 @@ window.iotaTransactionSpammer = (function(){
     function getTipTransactionObjects(){
         var tipSlice
         var done = false
-        if((tipIndex + 100) > tips.length){
+        if((tipIndex + tipBatchSize) > tips.length){
             tipSlice = tips.slice(tipIndex,tips.length)
             done = true
         }
         else{
-            tipSlice = tips.slice(tipIndex,tipIndex + 100)
+            tipSlice = tips.slice(tipIndex,tipIndex + tipBatchSize)
         }
         iota.api.getTransactionsObjects(tipSlice,function(error,success){
             if(error){
@@ -275,7 +276,7 @@ window.iotaTransactionSpammer = (function(){
             for(var i=0; i<success.length; i++){
                 tipTransactions.push(success[i])
             }
-            tipIndex += 100
+            tipIndex += tipBatchSize
             if(!done){
                 setTimeout(getTipTransactionObjects,100)
             }
@@ -368,6 +369,7 @@ window.iotaTransactionSpammer = (function(){
                     customProvider: customProvider,
                     depth: depth,
                     weight: weight,
+                    tipBatchSize: tipBatchSize,
                     spamSeed: spamSeed,
                     message: message,
                     tag: tag,
@@ -385,6 +387,7 @@ window.iotaTransactionSpammer = (function(){
             }
             if(params.hasOwnProperty("depth")) { depth = params.depth }
             if(params.hasOwnProperty("weight")) { weight = params.weight }
+            if(params.hasOwnProperty("tipBatchSize")) { tipBatchSize = params.tipBatchSize }
             if(params.hasOwnProperty("spamSeed")) { spamSeed = params.spamSeed }
             if(params.hasOwnProperty("message")) { message = params.message }
             if(params.hasOwnProperty("tag")) { tag = params.tag }
